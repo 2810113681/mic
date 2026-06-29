@@ -1,9 +1,21 @@
+# Local dev (not published to GitHub)
 .pio
-.vscode/.browse.c_cpp.db*
-.vscode/c_cpp_properties.json
-.vscode/launch.json
-.vscode/ipch
+.vscode/
+include/
+lib/
+platformio.ini
+remove_map.py
+src/
+test/
+test_voice_assistant_style.ps1
 esphome/.venv/
 esphome/.esphome/
+esphome/.gitignore
+esphome/GITHUB_VOICE.md
+esphome/README.md
+esphome/esphome_run.ps1
+esphome/re1_audio.yaml
+esphome/tx_voice.yaml
+esphome/components/re1_audio/
 **/__pycache__/
 *.pyc
