@@ -1,0 +1,141 @@
+# =============================================================================
+# Standalone ESPHome project for the N16R8 RE1.0 board (ESP32-S3 + ES8388).
+#
+# This file is fully self-contained. It does NOT need WiFi, Home Assistant,
+# or any cloud account - pure local USB/serial flashing + serial logger.
+#
+# Behaviour after flashing:
+#   * Press BTN1 (GPIO12) -> record 5 seconds, then auto-play it back.
+#   * Press BTN2 (GPIO11) -> just replay the last recording.
+#   * Press BTN3 (GPIO13) -> print one diagnostic line to the serial logger.
+#   * LED on GPIO21 turns ON while recording, blinks while playing.
+#
+# How to compile + flash (PowerShell, in this folder):
+#   pip install -U esphome
+#   esphome run re1_audio.yaml --device COM6 --no-logs
+# Or use the provided one-shot script:
+#   powershell -ExecutionPolicy Bypass -File .\esphome_run.ps1
+# =============================================================================
+
+esphome:
+  name: re1-audio
+  friendly_name: RE1 Audio Demo
+  on_boot:
+    priority: -100
+    then:
+      - logger.log: "RE1 audio demo: press BTN1 to record-and-play."
+
+esp32:
+  board: esp32-s3-devkitc-1
+  flash_size: 16MB
+  variant: esp32s3
+  framework:
+    type: arduino
+
+# 8MB octal PSRAM lives on this module; we use it for the record buffer.
+psram:
+  mode: octal
+  speed: 80MHz
+
+logger:
+  level: INFO
+  baud_rate: 115200
+  hardware_uart: USB_CDC
+
+# NOTE: this firmware is intentionally fully OFFLINE: no `wifi:`, no `api:`,
+# no `ota:`. Flashing is via USB only. If you later want HASS integration,
+# add `wifi:` + `api:` + `ota:` blocks; the rest of this file stays the same.
+
+# -----------------------------------------------------------------------------
+# Bring in the local external component that wraps ES8388 + I2S + record/play.
+# -----------------------------------------------------------------------------
+external_components:
+  - source:
+      type: local
+      path: components
+    components: [re1_audio]
+
+i2c:
+  - id: bus_a
+    sda: GPIO14
+    scl: GPIO47
+    frequency: 100kHz
+    scan: true
+
+re1_audio:
+  id: audio
+  i2c_id: bus_a
+  address: 0x10
+  mclk_pin: 8
+  bclk_pin: 3
+  lrck_pin: 9
+  din_pin: 10        # codec ASDOUT  -> ESP RX
+  dout_pin: 46       # ESP TX        -> codec DSDIN
+  sample_rate: 24000
+  record_seconds_max: 10
+  playback_gain: 3.0   # 1.0=原始音量；2.0/3.0 会更响（过大可能削顶失真）
+  record_gain: 1.5     # 录音端“加一档”：先放大录到的信号，再进缓存（过大也可能失真）
+
+# -----------------------------------------------------------------------------
+# Hardware buttons + status LED.
+# -----------------------------------------------------------------------------
+binary_sensor:
+  - platform: gpio
+    id: btn_record
+    name: "BTN1 record-and-play"
+    internal: true
+    pin:
+      number: GPIO12
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    on_press:
+      then:
+        - logger.log: "BTN1 pressed"
+        - lambda: |-
+            id(audio).record_then_play(5);
+
+  - platform: gpio
+    id: btn_replay
+    name: "BTN2 replay"
+    internal: true
+    pin:
+      number: GPIO11
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    on_press:
+      then:
+        - logger.log: "BTN2 pressed"
+        - lambda: |-
+            id(audio).play_last();
+
+  - platform: gpio
+    id: btn_diag
+    name: "BTN3 diag"
+    internal: true
+    pin:
+      number: GPIO13
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    on_press:
+      then:
+        - logger.log: "BTN3 pressed"
+        - lambda: |-
+            id(audio).log_diag();
+
+output:
+  - platform: gpio
+    pin: GPIO21
+    id: led_out
+
+light:
+  - platform: binary
+    name: "Status LED"
+    output: led_out
+    id: led_status
+    internal: true
