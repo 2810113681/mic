@@ -12,7 +12,7 @@ class Re1Es8388 : public audio_dac::AudioDac, public Component, public i2c::I2CD
  public:
   void setup() override;
   void dump_config() override;
-  float get_setup_priority() const override { return setup_priority::DATA; }
+  float get_setup_priority() const override { return setup_priority::HARDWARE; }
 
   bool set_mute_off() override;
   bool set_mute_on() override;

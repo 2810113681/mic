@@ -78,12 +78,15 @@ bool Re1Es8388::codec_init_() {
 }
 
 void Re1Es8388::setup() {
+  ESP_LOGI(TAG, "setup() begin");
   if (!this->codec_init_()) {
+    ESP_LOGE(TAG, "ES8388 init failed — check I2C wiring SDA=14 SCL=47 addr=0x%02X", this->address_);
     this->mark_failed();
     return;
   }
   this->is_muted_ = true;
   this->volume_ = 1.0f;
+  ESP_LOGI(TAG, "setup() done");
 }
 
 void Re1Es8388::dump_config() {
