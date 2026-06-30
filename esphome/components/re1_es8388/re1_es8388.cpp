@@ -25,9 +25,24 @@ bool Re1Es8388::codec_set_output_enabled_(bool enabled) {
   return this->codec_write_(0x04, enabled ? 0x3C : 0xC0, "DAC output enable");
 }
 
+bool Re1Es8388::codec_read_(uint8_t reg, uint8_t &val) {
+  uint8_t v = 0;
+  if (!this->read_byte(reg, &v)) {
+    return false;
+  }
+  val = v;
+  return true;
+}
+
 bool Re1Es8388::codec_init_() {
   ESP_LOGI(TAG, "ES8388 init start  i2c_addr=0x%02X", this->address_);
 
+  uint8_t probe = 0;
+  if (!this->codec_read_(0x00, probe)) {
+    ESP_LOGE(TAG, "I2C probe FAILED (cannot read reg 0x00) — check SDA=GPIO14 SCL=GPIO47");
+    return false;
+  }
+  ESP_LOGI(TAG, "I2C probe OK  reg0x00=0x%02X", probe);
   if (!this->codec_write_(0x08, 0x00, "MASTERMODE: codec slave")) return false;
   if (!this->codec_write_(0x01, 0x50, "CONTROL2: bias/reference")) return false;
   if (!this->codec_write_(0x02, 0x00, "CHIPPOWER: normal")) return false;
@@ -78,7 +93,9 @@ bool Re1Es8388::codec_init_() {
 }
 
 void Re1Es8388::setup() {
-  ESP_LOGI(TAG, "setup() begin");
+  ESP_LOGI(TAG, "setup() begin (priority AFTER_CONNECTION, same as re1_audio)");
+  // Let codec power/I2C bus settle after WiFi stack boot (matches re1_audio timing).
+  delay(50);
   if (!this->codec_init_()) {
     ESP_LOGE(TAG, "ES8388 init failed — check I2C wiring SDA=14 SCL=47 addr=0x%02X", this->address_);
     this->mark_failed();
