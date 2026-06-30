@@ -12,7 +12,9 @@ class Re1Es8388 : public audio_dac::AudioDac, public Component, public i2c::I2CD
  public:
   void setup() override;
   void dump_config() override;
-  float get_setup_priority() const override { return setup_priority::AFTER_CONNECTION; }
+  // Must run after I2C bus (1000) and BEFORE i2s_audio (600). re1_audio inits codec
+  // then I2S in one setup(); voice_assistant uses separate i2s — codec must go first.
+  float get_setup_priority() const override { return 990.0f; }
 
   bool set_mute_off() override;
   bool set_mute_on() override;

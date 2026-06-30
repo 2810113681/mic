@@ -93,9 +93,8 @@ bool Re1Es8388::codec_init_() {
 }
 
 void Re1Es8388::setup() {
-  ESP_LOGI(TAG, "setup() begin (priority AFTER_CONNECTION, same as re1_audio)");
-  // Let codec power/I2C bus settle after WiFi stack boot (matches re1_audio timing).
-  delay(50);
+  ESP_LOGI(TAG, "setup() begin (priority 990, before i2s_audio)");
+  delay(100);
   if (!this->codec_init_()) {
     ESP_LOGE(TAG, "ES8388 init failed — check I2C wiring SDA=14 SCL=47 addr=0x%02X", this->address_);
     this->mark_failed();
